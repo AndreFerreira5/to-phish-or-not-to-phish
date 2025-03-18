@@ -1,7 +1,6 @@
 import os
 from msvcrt import kbhit
 
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -9,9 +8,6 @@ import matplotlib.pyplot as plt
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import KFold
 
-from preprocessing.feature_extraction import BagOfWords
-from classifiers.minimum_distance_classifier import MinimumDistanceClassifier
-from sklearn.metrics import accuracy_score
 from preprocessing.kruskal_wallis import KruskalWallisTest
 from preprocessing.kruskal_wallis import FeaturePlotter
 from preprocessing.kruskal_wallis import CorrelationMatrix
@@ -51,10 +47,6 @@ def main():
     correlation_matrix = CorrelationMatrix(dataset, results)
     correlation_matrix.plot_correlation_matrix(top_n=10)
 
-
-    lda = LinearDiscriminantAnalysis(n_components=1)
-    X_train_lda = lda.fit_transform(train_data, train_data_labels)
-    X_test_lda = lda.transform(test_data)
 
     clean_dataset = dataset
     clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
