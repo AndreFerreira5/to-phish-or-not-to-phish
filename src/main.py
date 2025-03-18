@@ -1,4 +1,6 @@
 import os
+from msvcrt import kbhit
+
 
 import pandas as pd
 import seaborn as sns
@@ -8,6 +10,12 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import KFold
 
 from preprocessing.feature_extraction import BagOfWords
+from classifiers.minimum_distance_classifier import MinimumDistanceClassifier
+from sklearn.metrics import accuracy_score
+from preprocessing.kruskal_wallis import KruskalWallisTest
+from preprocessing.kruskal_wallis import FeaturePlotter
+from preprocessing.kruskal_wallis import CorrelationMatrix
+
 from classifiers.minimum_distance_classifier import (
     EuclideanMinimumDistanceClassifier,
     MahalanobisMinimumDistanceClassifier,
@@ -28,6 +36,25 @@ def main():
 
     dataset = pd.read_csv(DATASET_FILE)
     y = dataset["label"]
+
+
+    # Apply Kruskal-Wallis Test for feature selection
+    kruskal_test = KruskalWallisTest(dataset)
+    results = kruskal_test.perform_test()
+    kruskal_test.print_results(results)
+
+    # Plot the top 5 features based on Kruskal-Wallis significance
+    feature_plotter = FeaturePlotter(dataset, results)
+    feature_plotter.plot_features(top_n=10)
+
+    # Assuming you've already run the Kruskal-Wallis test and obtained the results
+    correlation_matrix = CorrelationMatrix(dataset, results)
+    correlation_matrix.plot_correlation_matrix(top_n=10)
+
+
+    lda = LinearDiscriminantAnalysis(n_components=1)
+    X_train_lda = lda.fit_transform(train_data, train_data_labels)
+    X_test_lda = lda.transform(test_data)
 
     clean_dataset = dataset
     clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
