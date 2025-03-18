@@ -1,12 +1,14 @@
 import os
 from msvcrt import kbhit
 
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
+
 from preprocessing.feature_extraction import BagOfWords
 from classifiers.minimum_distance_classifier import MinimumDistanceClassifier
 from sklearn.metrics import accuracy_score
@@ -14,33 +16,27 @@ from preprocessing.kruskal_wallis import KruskalWallisTest
 from preprocessing.kruskal_wallis import FeaturePlotter
 from preprocessing.kruskal_wallis import CorrelationMatrix
 
+from classifiers.minimum_distance_classifier import (
+    EuclideanMinimumDistanceClassifier,
+    MahalanobisMinimumDistanceClassifier,
+)
+from utils import (
+    display_predictions_performance,
+    plot_feature_correlation_matrix
+)
+
 
 DATASET_FILENAME = 'PhiUSIIL_Phishing_URL_Dataset.csv'
 DATASET_FILE = os.path.join('..', 'dataset', DATASET_FILENAME)
 
 
 def main():
+    if not os.path.isfile(DATASET_FILE):
+        raise FileNotFoundError(f"Dataset file with path {DATASET_FILE} not found.")
+
     dataset = pd.read_csv(DATASET_FILE)
-    # TODO performance metrics (ROC, accuracy, precision, F1, etc)
-    # TODO implement some code to not use only libs
+    y = dataset["label"]
 
-    # 80 training, 20 test # TODO implement K Cross Validation
-    test_data, train_data = train_test_split(dataset, test_size=0.8, random_state=42)
-    train_data_labels = train_data['label']
-    train_data.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
-    test_data_labels = test_data['label']
-    test_data.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
-
-    '''
-    # remove non numeric features TODO represent these features as numeric (BoW maybe)
-    dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
-    # calculate features correlation matrix
-    correlation_matrix = dataset.corr()
-    plt.figure(figsize=(40, 32))
-    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
-    plt.savefig('correlation_matrix.png')
-    plt.show()
-    '''
 
     # Apply Kruskal-Wallis Test for feature selection
     kruskal_test = KruskalWallisTest(dataset)
@@ -60,26 +56,44 @@ def main():
     X_train_lda = lda.fit_transform(train_data, train_data_labels)
     X_test_lda = lda.transform(test_data)
 
+    clean_dataset = dataset
+    clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
+    X = clean_dataset.to_numpy()
+    plot_feature_correlation_matrix(clean_dataset)
+
+    # TODO Kruskal Wallis, Data Standardization/Normalization, PCA (and then test with euclidean MDC and mahalanobis MDC)
+
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+    for i, (train_index, test_index) in enumerate(kfold.split(X)):
+        mdc_raw = MahalanobisMinimumDistanceClassifier()
+        mdc_raw.fit(X[train_index], y[train_index])
+        predictions = mdc_raw.predict(X[test_index])
+        display_predictions_performance(
+            predictions,
+            y[test_index],
+            title=f"RAW Data + Mahalanobis Minimum Distance Classifier FOLD {i}"
+        )
+
+    lda = LinearDiscriminantAnalysis(n_components=1)
+    X_LDA = lda.fit_transform(X, y)
     plt.figure(figsize=(8, 6))
-    sns.histplot(x=X_train_lda.flatten(), hue=train_data_labels, palette="viridis", kde=True, element="step")
+    sns.histplot(x=X_LDA.flatten(), hue=y, palette="viridis", kde=True, element="step")
     plt.title("LDA Transformation (1 Component)")
     plt.xlabel("LDA Component")
     plt.legend(title="Class")
     plt.show()
 
-    mdc_raw = MinimumDistanceClassifier()
-    mdc_raw.fit(train_data, train_data_labels)
-    predictions = mdc_raw.predict(test_data)
-    accuracy = accuracy_score(predictions, test_data_labels)
-    print("Accuracy without data preprocessing:", accuracy)
+    for i, (train_index, test_index) in enumerate(kfold.split(X_LDA)):
+        mdc = EuclideanMinimumDistanceClassifier()
+        mdc.fit(X_LDA[train_index], y[train_index])
+        predictions = mdc.predict(X_LDA[test_index])
+        display_predictions_performance(
+            predictions,
+            y[test_index],
+            title=f"LDA + Euclidean Minimum Distance Classifier FOLD {i}"
+        )
 
-    mdc_lda = MinimumDistanceClassifier()
-    mdc_lda.fit(X_train_lda, train_data_labels)
-    predictions = mdc_lda.predict(X_test_lda)
-    accuracy = accuracy_score(predictions, test_data_labels)
-    print("Accuracy using LDA:", accuracy)
 
-    #bow = BagOfWords(list(dataset['Title']))
 
 if __name__ == '__main__':
     main()
