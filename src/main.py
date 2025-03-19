@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import KFold
 
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
 from preprocessing.kruskal_wallis import KruskalWallisTest
 from preprocessing.kruskal_wallis import FeaturePlotter
 from preprocessing.kruskal_wallis import CorrelationMatrix
@@ -41,11 +44,12 @@ def main():
 
     # Plot the top 5 features based on Kruskal-Wallis significance
     feature_plotter = FeaturePlotter(dataset, results)
-    feature_plotter.plot_features(top_n=10)
+    feature_plotter.plot_features(top_n=5)
 
-    # Assuming you've already run the Kruskal-Wallis test and obtained the results
+    # Plot correlation matrix of Kruskal-Wallis results
     correlation_matrix = CorrelationMatrix(dataset, results)
-    correlation_matrix.plot_correlation_matrix(top_n=10)
+    correlation_matrix.plot_correlation_matrix(top_n=5)
+
 
 
     clean_dataset = dataset
@@ -53,9 +57,17 @@ def main():
     X = clean_dataset.to_numpy()
     plot_feature_correlation_matrix(clean_dataset)
 
-    # TODO Kruskal Wallis, Data Standardization/Normalization, PCA (and then test with euclidean MDC and mahalanobis MDC)
+    # TODO use Kruskal Wallis selected features, Data Standardization/Normalization
 
+    # - Data Normalization -
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # - Kfold -
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+
+    # - LDA -
+
     for i, (train_index, test_index) in enumerate(kfold.split(X)):
         mdc_raw = MahalanobisMinimumDistanceClassifier()
         mdc_raw.fit(X[train_index], y[train_index])
@@ -67,7 +79,7 @@ def main():
         )
 
     lda = LinearDiscriminantAnalysis(n_components=1)
-    X_LDA = lda.fit_transform(X, y)
+    X_LDA = lda.fit_transform(X_scaled, y) # ATTENTION I changed this Andrew, to use the normalized data
     plt.figure(figsize=(8, 6))
     sns.histplot(x=X_LDA.flatten(), hue=y, palette="viridis", kde=True, element="step")
     plt.title("LDA Transformation (1 Component)")
@@ -85,6 +97,42 @@ def main():
             title=f"LDA + Euclidean Minimum Distance Classifier FOLD {i}"
         )
 
+    # - PCA -
+
+    # Apply PCA
+    pca = PCA(n_components=3)  # Adjust the number of components as needed
+    X_pca = pca.fit_transform(X_scaled)
+    print(f"Explained Variance Ratio of PCA components: {pca.explained_variance_ratio_}")
+
+    # Test Euclidean Minimum Distance Classifier
+    for i, (train_index, test_index) in enumerate(kfold.split(X_pca)):
+        mdc_euclidean = EuclideanMinimumDistanceClassifier()
+        mdc_euclidean.fit(X_pca[train_index], y[train_index])
+        predictions = mdc_euclidean.predict(X_pca[test_index])
+        display_predictions_performance(
+            predictions,
+            y[test_index],
+            title=f"PCA + Euclidean Minimum Distance Classifier FOLD {i}"
+        )
+
+    # Test Mahalanobis Minimum Distance Classifier
+    for i, (train_index, test_index) in enumerate(kfold.split(X_pca)):
+        mdc_mahalanobis = MahalanobisMinimumDistanceClassifier()
+        mdc_mahalanobis.fit(X_pca[train_index], y[train_index])
+        predictions = mdc_mahalanobis.predict(X_pca[test_index])
+        display_predictions_performance(
+            predictions,
+            y[test_index],
+            title=f"PCA + Mahalanobis Minimum Distance Classifier FOLD {i}"
+        )
+
+    # Optional: Plot the explained variance ratio for PCA
+    plt.figure(figsize=(8, 6))
+    plt.bar(range(1, len(pca.explained_variance_ratio_) + 1), pca.explained_variance_ratio_)
+    plt.title("Explained Variance Ratio for Each PCA Component")
+    plt.xlabel("PCA Component")
+    plt.ylabel("Explained Variance Ratio")
+    plt.show()
 
 
 if __name__ == '__main__':
