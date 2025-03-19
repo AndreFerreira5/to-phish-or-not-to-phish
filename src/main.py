@@ -1,5 +1,4 @@
 import os
-from msvcrt import kbhit
 
 import pandas as pd
 import seaborn as sns
@@ -21,21 +20,23 @@ from classifiers.minimum_distance_classifier import (
 )
 from utils import (
     display_predictions_performance,
-    plot_feature_correlation_matrix
+    plot_feature_correlation_matrix,
+    process_non_numeric_data
 )
 
 
 DATASET_FILENAME = 'PhiUSIIL_Phishing_URL_Dataset.csv'
 DATASET_FILE = os.path.join('..', 'dataset', DATASET_FILENAME)
-
+USE_NON_NUMERIC_FEATURES = False
 
 def main():
     if not os.path.isfile(DATASET_FILE):
         raise FileNotFoundError(f"Dataset file with path {DATASET_FILE} not found.")
 
     dataset = pd.read_csv(DATASET_FILE)
-    y = dataset["label"]
+    processed_dataset = process_non_numeric_data(dataset)
 
+    y = dataset["label"]
 
     # Apply Kruskal-Wallis Test for feature selection
     kruskal_test = KruskalWallisTest(dataset)
@@ -50,14 +51,15 @@ def main():
     correlation_matrix = CorrelationMatrix(dataset, results)
     correlation_matrix.plot_correlation_matrix(top_n=5)
 
+    if USE_NON_NUMERIC_FEATURES:
+        clean_dataset = processed_dataset
+        clean_dataset.to_csv("processed_dataset.csv", index=False)
+    else:
+        clean_dataset = dataset
+        clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
 
-
-    clean_dataset = dataset
-    clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
     X = clean_dataset.to_numpy()
     plot_feature_correlation_matrix(clean_dataset)
-
-    # TODO use Kruskal Wallis selected features, Data Standardization/Normalization
 
     # - Data Normalization -
     scaler = StandardScaler()

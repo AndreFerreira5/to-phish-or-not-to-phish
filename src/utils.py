@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 from sklearn.metrics import (
     precision_score,
     recall_score,
@@ -8,6 +9,8 @@ from sklearn.metrics import (
     roc_auc_score,
     RocCurveDisplay
 )
+from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def display_predictions_performance(
@@ -33,7 +36,34 @@ def plot_feature_correlation_matrix(
         filename="correlation_matrix.png"
 ):
     correlation_matrix = dataset.corr()
-    plt.figure(figsize=(40, 32))
+    plt.figure(figsize=(80, 64))
     sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
     plt.savefig(filename)
     plt.show()
+
+
+def process_non_numeric_data(dataset):
+    dataset = dataset.copy()
+
+    label_encoders = {}
+    for col in ["TLD", "Domain"]:
+        le = LabelEncoder()
+        dataset[col] = le.fit_transform(dataset[col])
+        label_encoders[col] = le
+
+    tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english", max_features=100)
+    url_tfidf = tfidf.fit_transform(dataset["URL"])
+    title_tfidf = tfidf.fit_transform(dataset["Title"])
+
+    url_tfidf_df = pd.DataFrame(url_tfidf.toarray(), columns=[f"URL_{i}" for i in range(url_tfidf.shape[1])])
+    title_tfidf_df = pd.DataFrame(title_tfidf.toarray(), columns=[f"Title_{i}" for i in range(url_tfidf.shape[1])])
+
+    dataset.drop(columns=["URL", "Title"], inplace=True)
+    dataset = pd.concat([dataset, url_tfidf_df, title_tfidf_df], axis=1)
+
+    dataset["File_Extension"] = dataset["FILENAME"].apply(lambda x: x.split('.')[-1])
+    le = LabelEncoder()
+    dataset["File_Extension"] = le.fit_transform(dataset["File_Extension"])
+    dataset.drop(columns=["FILENAME"], inplace=True)
+
+    return dataset
