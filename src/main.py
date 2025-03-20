@@ -42,11 +42,31 @@ def main():
 
     y = dataset["label"]
 
+    
 
+    if USE_NON_NUMERIC_FEATURES:
+        clean_dataset = processed_dataset
+        clean_dataset.to_csv("processed_dataset.csv", index=False)
+    else:
+        #clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
+        clean_dataset.drop(columns=["label"], inplace=True)
+
+    # Apply Kruskal-Wallis Test for feature selection
+    kruskal_test = KruskalWallisTest(clean_dataset)
+    results = kruskal_test.perform_test()
+    kruskal_test.print_results(results)
+
+    # Select top 5 features based on Kruskal-Wallis significance
+    top_features = [feature for feature, _ in results[:13]]  # Select top 5 features
+
+    # Plot the top 5 features based on Kruskal-Wallis significance
+    feature_plotter = FeaturePlotter(clean_dataset, results)
+    feature_plotter.plot_features(top_n=13)
 
     # Plot correlation matrix of Kruskal-Wallis results
-    #correlation_matrix = CorrelationMatrix(dataset, results)
-    #correlation_matrix.plot_correlation_matrix(top_n=5)
+    selected_features_data = clean_dataset[top_features]  # Dataset with the selected top features
+    plot_feature_correlation_matrix(selected_features_data,x=10,y=8)
+
 
     if USE_NON_NUMERIC_FEATURES:
         clean_dataset = processed_dataset
@@ -54,15 +74,7 @@ def main():
     else:
         clean_dataset = dataset
         clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
-
-    # Apply Kruskal-Wallis Test for feature selection
-    kruskal_test = KruskalWallisTest(clean_dataset)
-    results = kruskal_test.perform_test()
-    kruskal_test.print_results(results)
-
-    # Plot the top 5 features based on Kruskal-Wallis significance
-    feature_plotter = FeaturePlotter(clean_dataset, results)
-    feature_plotter.plot_features(top_n=30)
+        
 
     exit(0)
 
@@ -72,9 +84,12 @@ def main():
         plot_feature_correlation_matrix(clean_dataset)
 
     # - Data Normalization -
+
     if SCALE_DATA:
         scaler = StandardScaler()
         X = scaler.fit_transform(X)
+        selected_features_scaled = scaler.fit_transform(selected_features_data)
+
 
     # - Kfold -
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -109,7 +124,9 @@ def main():
 
     # LDA
     lda = LinearDiscriminantAnalysis(n_components=1)
-    X_LDA = lda.fit_transform(X, y)
+    X_LDA = lda.fit_transform(X, y) # This uses all features
+    X_LDA = lda.fit_transform(selected_features_scaled, y) # This uses only Kruskal Features
+
     plt.figure(figsize=(8, 6))
     sns.histplot(x=X_LDA.flatten(), hue=y, palette="viridis", kde=True, element="step")
     plt.title("LDA Transformation (1 Component)")
@@ -133,11 +150,19 @@ def main():
 
     # - PCA -
     pca = PCA(n_components=0.95)
-    X_pca = pca.fit_transform(X)
+    X_pca = pca.fit_transform(X) # this uses all feautres
+    X_pca = pca.fit_transform(selected_features_scaled) # this uses kruskal top feautres
+
 
     # PCA + Euclidean MDC
     predictions = []
-    test_indexes = []
+    test_indexes = [] 
+
+    # Print the number of components selected and explained variance ratio
+    print(f"Number of components selected: {pca.n_components_}")
+    print(f"Explained Variance Ratio: {pca.explained_variance_ratio_}")
+
+    # Test Euclidean Minimum Distance Classifier
     for i, (train_index, test_index) in enumerate(kfold.split(X_pca)):
         mdc_euclidean = EuclideanMinimumDistanceClassifier()
         mdc_euclidean.fit(X_pca[train_index], y[train_index])
