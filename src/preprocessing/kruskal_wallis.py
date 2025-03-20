@@ -29,6 +29,12 @@ class KruskalWallisTest:
         Hs = {}
 
         for feature in self.feature_names:
+
+            # Skip feature if its variance is 0 in either class
+            #if self.phishing_data[feature].nunique() <= 1 or self.legitimate_data[feature].nunique() <= 1:
+            #    print(f"Skipping {feature} because it has no variance in either class")
+            #    continue
+
             # Perform the Kruskal-Wallis test on the feature
             st = stats.kruskal(self.phishing_data[feature].dropna(), self.legitimate_data[feature].dropna())
             Hs[feature] = st.statistic

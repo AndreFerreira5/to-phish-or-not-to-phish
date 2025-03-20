@@ -38,18 +38,28 @@ def main():
 
     y = dataset["label"]
 
+    if USE_NON_NUMERIC_FEATURES:
+        clean_dataset = processed_dataset
+        clean_dataset.to_csv("processed_dataset.csv", index=False)
+    else:
+        clean_dataset = dataset
+        clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title"], inplace=True)
+
     # Apply Kruskal-Wallis Test for feature selection
-    kruskal_test = KruskalWallisTest(dataset)
+    kruskal_test = KruskalWallisTest(clean_dataset)
     results = kruskal_test.perform_test()
     kruskal_test.print_results(results)
 
+    # Select top 5 features based on Kruskal-Wallis significance
+    top_features = [feature for feature, _ in results[:13]]  # Select top 5 features
+
     # Plot the top 5 features based on Kruskal-Wallis significance
-    feature_plotter = FeaturePlotter(dataset, results)
-    feature_plotter.plot_features(top_n=5)
+    feature_plotter = FeaturePlotter(clean_dataset, results)
+    feature_plotter.plot_features(top_n=13)
 
     # Plot correlation matrix of Kruskal-Wallis results
-    correlation_matrix = CorrelationMatrix(dataset, results)
-    correlation_matrix.plot_correlation_matrix(top_n=5)
+    selected_features_data = clean_dataset[top_features]  # Dataset with the selected top features
+    plot_feature_correlation_matrix(selected_features_data,x=10,y=8)
 
     if USE_NON_NUMERIC_FEATURES:
         clean_dataset = processed_dataset
