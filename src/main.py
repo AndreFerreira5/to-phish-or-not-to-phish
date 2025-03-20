@@ -66,7 +66,8 @@ def main():
         clean_dataset.to_csv("processed_dataset.csv", index=False)
     else:
         clean_dataset = dataset
-        clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
+        #clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
+        clean_dataset.drop(columns=["label"], inplace=True)
 
     X = clean_dataset.to_numpy()
     plot_feature_correlation_matrix(clean_dataset)
@@ -74,6 +75,8 @@ def main():
     # - Data Normalization -
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
+    # Kruskal Top results
+    selected_features_scaled = scaler.fit_transform(selected_features_data)
 
     # - Kfold -
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -91,7 +94,7 @@ def main():
         )
 
     lda = LinearDiscriminantAnalysis(n_components=1)
-    X_LDA = lda.fit_transform(X_scaled, y) # ATTENTION I changed this Andrew, to use the normalized data
+    X_LDA = lda.fit_transform(selected_features_scaled, y) # ATTENTION I changed this Andrew, to use the normalized data
     plt.figure(figsize=(8, 6))
     sns.histplot(x=X_LDA.flatten(), hue=y, palette="viridis", kde=True, element="step")
     plt.title("LDA Transformation (1 Component)")
@@ -112,9 +115,12 @@ def main():
     # - PCA -
 
     # Apply PCA
-    pca = PCA(n_components=3)  # Adjust the number of components as needed
-    X_pca = pca.fit_transform(X_scaled)
-    print(f"Explained Variance Ratio of PCA components: {pca.explained_variance_ratio_}")
+    pca = PCA(n_components=0.95)  # Adjust the number of components as needed
+    X_pca = pca.fit_transform(selected_features_scaled)
+
+    # Print the number of components selected and explained variance ratio
+    print(f"Number of components selected: {pca.n_components_}")
+    print(f"Explained Variance Ratio: {pca.explained_variance_ratio_}")
 
     # Test Euclidean Minimum Distance Classifier
     for i, (train_index, test_index) in enumerate(kfold.split(X_pca)):
