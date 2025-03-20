@@ -7,7 +7,8 @@ from sklearn.metrics import (
     f1_score,
     accuracy_score,
     roc_auc_score,
-    RocCurveDisplay
+    RocCurveDisplay,
+    confusion_matrix,
 )
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -18,15 +19,67 @@ def display_predictions_performance(
         test_data_labels,
         title="Model Performance"
 ):
+    TN, FP, FN, TP = confusion_matrix(test_data_labels, predictions).ravel()
     print(f"----------{title}----------")
     print("Precision:", precision_score(test_data_labels, predictions))
     print("Recall:", recall_score(test_data_labels, predictions))
     print("F1:", f1_score(test_data_labels, predictions))
     print("Accuracy:", accuracy_score(test_data_labels, predictions))
     print("ROC AUC:", roc_auc_score(test_data_labels, predictions))
+    print("TP:", TP)
+    print("FP:", FP)
+    print("TN:", TN)
+    print("FN:", FN)
     print("-"*(len(title)+20))
 
     RocCurveDisplay.from_predictions(test_data_labels, predictions)
+    plt.show()
+
+
+def display_folding_predictions_performance(
+        predictions: list,
+        test_data_labels: list,
+        title=f"Unknown Model Performance"
+):
+    fold_num = len(predictions)
+    print(f"----------{title}----------")
+    print("Fold\tPrecision\tRecall\tF1\tAccuracy\tROC AUC\tTP\tFP\tTN\tFN")
+
+    precision_sum = 0
+    recall_sum = 0
+    f1_sum = 0
+    accuracy_sum = 0
+    roc_auc_sum = 0
+    TP_sum = 0
+    FN_sum = 0
+    TN_sum = 0
+    FP_sum = 0
+    #folding_metrics = {"precision": [], "recall": [], "f1": [], "accuracy": [], "roc_auc": [], "tp": [], "fp": [], "tn": [], "fn": []}
+    for i, (pred, test_labels) in enumerate(zip(predictions, test_data_labels)):
+        precision = precision_score(test_labels, pred)
+        recall = recall_score(test_labels, pred)
+        f1 = f1_score(test_labels, pred)
+        accuracy = accuracy_score(test_labels, pred)
+        ROC_AUC = roc_auc_score(test_labels, pred)
+        TN, FP, FN, TP = confusion_matrix(test_labels, pred).ravel()
+
+        print(f"{i}\t{precision}\t{recall}\t{f1}\t{accuracy}\t{ROC_AUC}\t{TP}\t{FP}\t{TN}\t{FN}")
+        #RocCurveDisplay.from_predictions(test_labels, pred)
+
+        precision_sum += precision
+        recall_sum += recall
+        f1_sum += f1
+        accuracy_sum += accuracy
+        roc_auc_sum += ROC_AUC
+        TP_sum += TP
+        FN_sum += FN
+        TN_sum += TN
+        FP_sum += FP
+
+    print(f"Average\t{precision_sum/fold_num}\t{recall_sum/fold_num}\t{f1_sum/fold_num}\t{accuracy_sum/fold_num}\t{roc_auc_sum/fold_num}\t{TP_sum/fold_num}\t{FP_sum/fold_num}\t{TN_sum/fold_num}\t{FN_sum/fold_num}")
+    print("-"*(len(title)+20))
+
+
     plt.show()
 
 
