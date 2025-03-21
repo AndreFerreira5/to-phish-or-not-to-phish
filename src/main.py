@@ -31,8 +31,8 @@ DATASET_FILE = os.path.join('..', 'dataset', DATASET_FILENAME)
 USE_NON_NUMERIC_FEATURES = False
 SCALE_DATA = True
 PLOT_CORRELATION_MATRIX = False
-PLOT_KRUSKALWALLIS_TEST_FEATURES = False
-USE_KRUSKALWALLIS = False
+PLOT_KRUSKALWALLIS_TEST_FEATURES = True
+USE_KRUSKALWALLIS = True
 NUMBER_OF_FEATURES = 13
 
 def main():
@@ -62,7 +62,7 @@ def main():
     top_features = [feature for feature, _ in results[:NUMBER_OF_FEATURES]]  # Select top 5 features
 
     # Plot the top 5 features based on Kruskal-Wallis significance
-    if PLOT_CORRELATION_MATRIX:
+    if PLOT_KRUSKALWALLIS_TEST_FEATURES:
         feature_plotter = FeaturePlotter(clean_dataset, results)
         feature_plotter.plot_features(top_n=NUMBER_OF_FEATURES)
 
@@ -213,11 +213,6 @@ def main():
     plt.title('Explained Variance vs Number of Components')
     plt.show()
 
-    plt.plot(range(1, len(pca.explained_variance_ratio_) + 1), pca.explained_variance_ratio_)
-    plt.xlabel('Number of Components')
-    plt.ylabel('Explained Variance')
-    plt.title('Scree Plot')
-    plt.show()
 
 
 if __name__ == '__main__':
