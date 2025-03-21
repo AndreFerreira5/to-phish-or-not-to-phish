@@ -13,7 +13,6 @@ from sklearn.preprocessing import StandardScaler
 
 from preprocessing.kruskal_wallis import KruskalWallisTest
 from preprocessing.kruskal_wallis import FeaturePlotter
-from preprocessing.kruskal_wallis import CorrelationMatrix
 
 from classifiers.minimum_distance_classifier import (
     EuclideanMinimumDistanceClassifier,
@@ -29,9 +28,12 @@ from utils import (
 
 DATASET_FILENAME = 'PhiUSIIL_Phishing_URL_Dataset.csv'
 DATASET_FILE = os.path.join('..', 'dataset', DATASET_FILENAME)
-USE_NON_NUMERIC_FEATURES = True
-SCALE_DATA = False
+USE_NON_NUMERIC_FEATURES = False
+SCALE_DATA = True
 PLOT_CORRELATION_MATRIX = False
+PLOT_KRUSKALWALLIS_TEST_FEATURES = False
+USE_KRUSKALWALLIS = False
+NUMBER_OF_FEATURES = 13
 
 def main():
     if not os.path.isfile(DATASET_FILE):
@@ -48,20 +50,21 @@ def main():
         clean_dataset = processed_dataset
         clean_dataset.to_csv("processed_dataset.csv", index=False)
     else:
-        #clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
-        clean_dataset.drop(columns=["label"], inplace=True)
+        clean_dataset = dataset
+        clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title"], inplace=True)
 
     # Apply Kruskal-Wallis Test for feature selection
     kruskal_test = KruskalWallisTest(clean_dataset)
-    results = kruskal_test.perform_test()
+    results = kruskal_test.perform_test(SKIP_FEATURES=USE_NON_NUMERIC_FEATURES)
     kruskal_test.print_results(results)
 
     # Select top 5 features based on Kruskal-Wallis significance
-    top_features = [feature for feature, _ in results[:13]]  # Select top 5 features
+    top_features = [feature for feature, _ in results[:NUMBER_OF_FEATURES]]  # Select top 5 features
 
     # Plot the top 5 features based on Kruskal-Wallis significance
-    feature_plotter = FeaturePlotter(clean_dataset, results)
-    feature_plotter.plot_features(top_n=13)
+    if PLOT_CORRELATION_MATRIX:
+        feature_plotter = FeaturePlotter(clean_dataset, results)
+        feature_plotter.plot_features(top_n=NUMBER_OF_FEATURES)
 
     # Plot correlation matrix of Kruskal-Wallis results
     selected_features_data = clean_dataset[top_features]  # Dataset with the selected top features
@@ -73,10 +76,8 @@ def main():
         clean_dataset.to_csv("processed_dataset.csv", index=False)
     else:
         clean_dataset = dataset
-        clean_dataset.drop(columns=["FILENAME", "URL", "Domain", "TLD", "Title", "label"], inplace=True)
+        clean_dataset.drop(columns=["label"], inplace=True)
         
-
-    exit(0)
 
     X = clean_dataset.to_numpy()
 
@@ -88,7 +89,7 @@ def main():
     if SCALE_DATA:
         scaler = StandardScaler()
         X = scaler.fit_transform(X)
-        selected_features_scaled = scaler.fit_transform(selected_features_data)
+        selected_features_data = scaler.fit_transform(selected_features_data)
 
 
     # - Kfold -
@@ -124,8 +125,12 @@ def main():
 
     # LDA
     lda = LinearDiscriminantAnalysis(n_components=1)
-    X_LDA = lda.fit_transform(X, y) # This uses all features
-    X_LDA = lda.fit_transform(selected_features_scaled, y) # This uses only Kruskal Features
+
+    if USE_NON_NUMERIC_FEATURES:
+        X_LDA = lda.fit_transform(selected_features_data, y)  # This uses only Kruskal Features
+    else:
+        X_LDA = lda.fit_transform(X, y)  # This uses all features
+
 
     plt.figure(figsize=(8, 6))
     sns.histplot(x=X_LDA.flatten(), hue=y, palette="viridis", kde=True, element="step")
@@ -149,14 +154,17 @@ def main():
     )
 
     # - PCA -
-    pca = PCA(n_components=0.95)
-    X_pca = pca.fit_transform(X) # this uses all feautres
-    X_pca = pca.fit_transform(selected_features_scaled) # this uses kruskal top feautres
+    pca = PCA(n_components= 0.95)
+
+    if USE_KRUSKALWALLIS:
+        X_pca = pca.fit_transform(selected_features_data)  # this uses kruskal top feautres
+    else:
+        X_pca = pca.fit_transform(X)  # this uses all feautres
 
 
     # PCA + Euclidean MDC
     predictions = []
-    test_indexes = [] 
+    test_indexes = []
 
     # Print the number of components selected and explained variance ratio
     print(f"Number of components selected: {pca.n_components_}")

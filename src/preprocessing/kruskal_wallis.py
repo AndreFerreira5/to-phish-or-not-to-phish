@@ -19,7 +19,7 @@ class KruskalWallisTest:
         self.legitimate_data = dataset[dataset[label_column] == 0]  # Legitimate URLs
         self.feature_names = [col for col in dataset.columns if col != label_column]  # Features
 
-    def perform_test(self):
+    def perform_test(self, SKIP_FEATURES=False):
         """
         Perform the Kruskal-Wallis test for each feature in the dataset.
 
@@ -31,9 +31,10 @@ class KruskalWallisTest:
         for feature in self.feature_names:
 
             # Skip feature if its variance is 0 in either class
-            #if self.phishing_data[feature].nunique() <= 1 or self.legitimate_data[feature].nunique() <= 1:
-            #    print(f"Skipping {feature} because it has no variance in either class")
-            #    continue
+            if SKIP_FEATURES:
+                if self.phishing_data[feature].nunique() <= 1 or self.legitimate_data[feature].nunique() <= 1:
+                    print(f"Skipping {feature} because it has no variance in either class")
+                    continue
 
             # Perform the Kruskal-Wallis test on the feature
             st = stats.kruskal(self.phishing_data[feature].dropna(), self.legitimate_data[feature].dropna())
