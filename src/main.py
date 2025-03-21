@@ -126,7 +126,7 @@ def main():
     # LDA
     lda = LinearDiscriminantAnalysis(n_components=1)
 
-    if USE_NON_NUMERIC_FEATURES:
+    if USE_KRUSKALWALLIS:
         X_LDA = lda.fit_transform(selected_features_data, y)  # This uses only Kruskal Features
     else:
         X_LDA = lda.fit_transform(X, y)  # This uses all features
