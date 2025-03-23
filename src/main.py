@@ -58,10 +58,10 @@ def main():
     results = kruskal_test.perform_test(SKIP_FEATURES=USE_NON_NUMERIC_FEATURES)
     kruskal_test.print_results(results)
 
-    # Select top 5 features based on Kruskal-Wallis significance
+    # Select top 13 features based on Kruskal-Wallis significance
     top_features = [feature for feature, _ in results[:NUMBER_OF_FEATURES]]  # Select top 5 features
 
-    # Plot the top 5 features based on Kruskal-Wallis significance
+    # Plot the top 13 features based on Kruskal-Wallis significance
     if PLOT_KRUSKALWALLIS_TEST_FEATURES:
         feature_plotter = FeaturePlotter(clean_dataset, results)
         feature_plotter.plot_features(top_n=NUMBER_OF_FEATURES)
