@@ -19,7 +19,7 @@ class KruskalWallisTest:
         self.legitimate_data = dataset[dataset[label_column] == 0]  # Legitimate URLs
         self.feature_names = [col for col in dataset.columns if col != label_column]  # Features
 
-    def perform_test(self):
+    def perform_test(self, SKIP_FEATURES=False):
         """
         Perform the Kruskal-Wallis test for each feature in the dataset.
 
@@ -29,6 +29,13 @@ class KruskalWallisTest:
         Hs = {}
 
         for feature in self.feature_names:
+
+            # Skip feature if its variance is 0 in either class
+            if SKIP_FEATURES:
+                if self.phishing_data[feature].nunique() <= 1 or self.legitimate_data[feature].nunique() <= 1:
+                    print(f"Skipping {feature} because it has no variance in either class")
+                    continue
+
             # Perform the Kruskal-Wallis test on the feature
             st = stats.kruskal(self.phishing_data[feature].dropna(), self.legitimate_data[feature].dropna())
             Hs[feature] = st.statistic
@@ -110,50 +117,3 @@ class FeaturePlotter:
             )
 
             fig.show()
-
-
-import plotly.express as px
-import numpy as np
-
-
-class CorrelationMatrix:
-    def __init__(self, dataset, kruskal_results, label_column='label'):
-        """
-        Initialize the CorrelationMatrix object to compute and plot correlations of top features.
-
-        Args:
-            dataset (pd.DataFrame): The dataset to calculate correlations for.
-            kruskal_results (list): List of tuples with feature names and Kruskal-Wallis statistics, sorted by significance.
-            label_column (str): The name of the column that contains the class labels.
-        """
-        self.dataset = dataset
-        self.kruskal_results = kruskal_results
-        self.label_column = label_column
-
-    def plot_correlation_matrix(self, top_n=5):
-        """
-        Plot the correlation matrix of the top N features based on Kruskal-Wallis significance.
-
-        Args:
-            top_n (int): Number of top features to plot based on Kruskal-Wallis test significance.
-        """
-        top_features = [feature for feature, _ in self.kruskal_results[:top_n]]
-
-        # Extract the data for the top features
-        X = self.dataset[top_features].values
-
-        # Calculate the correlation matrix
-        corrMat = np.corrcoef(X, rowvar=False)
-
-        # Plot the correlation matrix
-        fig = px.imshow(corrMat,
-                        text_auto=True,
-                        labels=dict(x="Features", y="Features", color="Correlation"),
-                        x=top_features,
-                        y=top_features,
-                        width=800,
-                        height=800,
-                        color_continuous_scale=px.colors.sequential.gray)
-
-        fig.update_layout(title="Correlation Matrix of Top Features")
-        fig.show()
