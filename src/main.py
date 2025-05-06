@@ -31,7 +31,7 @@ DATASET_FILE = os.path.join('..', 'dataset', DATASET_FILENAME)
 USE_NON_NUMERIC_FEATURES = False
 SCALE_DATA = True
 PLOT_CORRELATION_MATRIX = False
-PLOT_KRUSKALWALLIS_TEST_FEATURES = True
+PLOT_KRUSKALWALLIS_TEST_FEATURES = False
 USE_KRUSKALWALLIS = True
 NUMBER_OF_FEATURES = 13
 
@@ -58,8 +58,45 @@ def main():
     results = kruskal_test.perform_test(SKIP_FEATURES=USE_NON_NUMERIC_FEATURES)
     kruskal_test.print_results(results)
 
+    sorted_results = sorted(results, key=lambda x: x[1], reverse=True)
+
+    # Plot the Kruskal-Wallis test results for all features
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=[feature for feature, _ in sorted_results], y=[h for _, h in sorted_results])
+    plt.title("Kruskal-Wallis Test Results - Feature Discrimination (H Statistic)")
+    plt.xlabel("Feature")
+    plt.ylabel("H Statistic")
+    plt.xticks(rotation=90)
+    plt.show()
+
+    # Assuming 'results' is a list of tuples (feature_name, H_statistic)
+    h_statistics = [h for _, h in results]
+
+    # Calculate the Standard Deviation (Desvio Padrão)
+    std_dev = np.std(h_statistics)
+
+    # Calculate the Quartiles
+    Q1 = np.percentile(h_statistics, 25)
+    Q2 = np.percentile(h_statistics, 50)  # This is the median
+    Q3 = np.percentile(h_statistics, 75)
+
+    # Print the results
+    print(f"Standard Deviation: {std_dev:.2f}")
+    print(f"First Quartile (Q1): {Q1:.2f}")
+    print(f"Median (Q2): {Q2:.2f}")
+    print(f"Third Quartile (Q3): {Q3:.2f}")
+
+    # Create a boxplot to visualize the quartiles, median, and outliers
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x=h_statistics)
+    plt.title("Distribution of Kruskal-Wallis Test H Statistics")
+    plt.xlabel("H Statistic")
+    plt.show()
+
     # Select top 13 features based on Kruskal-Wallis significance
-    top_features = [feature for feature, _ in results[:NUMBER_OF_FEATURES]]  # Select top 5 features
+    top_features = [feature for feature, _ in results[:NUMBER_OF_FEATURES]]  # Select top  features
+
+
 
     # Plot the top 13 features based on Kruskal-Wallis significance
     if PLOT_KRUSKALWALLIS_TEST_FEATURES:
@@ -161,6 +198,37 @@ def main():
     else:
         X_pca = pca.fit_transform(X)  # this uses all feautres
 
+    # Eigenvalues (explained variance ratios)
+    eigenvalues = pca.explained_variance_
+
+    # Scree Plot
+    plt.figure(figsize=(8, 6))
+    plt.plot(range(1, len(eigenvalues) + 1), eigenvalues, marker='o', linestyle='--')
+    plt.title("Scree Plot")
+    plt.xlabel("Principal Components")
+    plt.ylabel("Eigenvalue")
+    plt.grid(True)
+    plt.show()
+
+    # Apply the Kaiser Criterion: Select components with eigenvalue > 1
+    kaiser_components = [i for i, ev in enumerate(eigenvalues) if ev > 1]
+    print(f"Number of components based on Kaiser Criterion (eigenvalue > 1): {len(kaiser_components)}")
+
+
+    # Plot the explained variance ratio for PCA
+    plt.figure(figsize=(8, 6))
+    plt.bar(range(1, len(pca.explained_variance_ratio_) + 1), pca.explained_variance_ratio_)
+    plt.title("Explained Variance Ratio for Each PCA Component")
+    plt.xlabel("PCA Component")
+    plt.ylabel("Explained Variance Ratio")
+    plt.show()
+
+    plt.plot(range(1, len(pca.explained_variance_ratio_) + 1),
+             np.cumsum(pca.explained_variance_ratio_))
+    plt.xlabel('Number of Components')
+    plt.ylabel('Cumulative Explained Variance')
+    plt.title('Explained Variance vs Number of Components')
+    plt.show()
 
     # PCA + Euclidean MDC
     predictions = []
@@ -198,20 +266,7 @@ def main():
         title=f"PCA + Mahalanobis Minimum Distance Classifier"
     )
 
-    # Plot the explained variance ratio for PCA
-    plt.figure(figsize=(8, 6))
-    plt.bar(range(1, len(pca.explained_variance_ratio_) + 1), pca.explained_variance_ratio_)
-    plt.title("Explained Variance Ratio for Each PCA Component")
-    plt.xlabel("PCA Component")
-    plt.ylabel("Explained Variance Ratio")
-    plt.show()
 
-    plt.plot(range(1, len(pca.explained_variance_ratio_) + 1),
-             np.cumsum(pca.explained_variance_ratio_))
-    plt.xlabel('Number of Components')
-    plt.ylabel('Cumulative Explained Variance')
-    plt.title('Explained Variance vs Number of Components')
-    plt.show()
 
 
 
