@@ -80,6 +80,21 @@ def main():
     Q2 = np.percentile(h_statistics, 50)  # This is the median
     Q3 = np.percentile(h_statistics, 75)
 
+    # boxplot + Q3 line
+    #plt.figure(figsize=(8, 5))
+    #sns.boxplot(x=h_statistics)
+    #plt.axvline(Q3, color='red', linestyle='--', label=f"Q3 = {Q3:.2f}")
+    #plt.title("Distribution of Kruskal–Wallis H Statistics")
+    #plt.xlabel("H Statistic")
+    #plt.legend()
+    #plt.show()
+
+    # select all features above Q3
+    #top_by_q3 = [feat for feat, h in sorted_results if h > Q3]
+    #print(f"{len(top_by_q3)} features have H > Q3 → {top_by_q3}")
+
+
+
     # Print the results
     print(f"Standard Deviation: {std_dev:.2f}")
     print(f"First Quartile (Q1): {Q1:.2f}")
@@ -191,12 +206,12 @@ def main():
     )
 
     # - PCA -
-    pca = PCA(n_components= 0.95)
+    pca = PCA()
 
     if USE_KRUSKALWALLIS:
-        X_pca = pca.fit_transform(selected_features_data)  # this uses kruskal top feautres
+        pca = pca.fit(selected_features_data)  # this uses kruskal top feautres
     else:
-        X_pca = pca.fit_transform(X)  # this uses all feautres
+        pca = pca.fit(X)  # this uses all feautres
 
     # Eigenvalues (explained variance ratios)
     eigenvalues = pca.explained_variance_
@@ -207,13 +222,21 @@ def main():
     plt.title("Scree Plot")
     plt.xlabel("Principal Components")
     plt.ylabel("Eigenvalue")
+    plt.axhline(1.0, color='red', linestyle='--', label='Kaiser cutoff (λ=1)')
+    plt.legend()
     plt.grid(True)
     plt.show()
 
     # Apply the Kaiser Criterion: Select components with eigenvalue > 1
-    kaiser_components = [i for i, ev in enumerate(eigenvalues) if ev > 1]
-    print(f"Number of components based on Kaiser Criterion (eigenvalue > 1): {len(kaiser_components)}")
+    kaiser_indices = [i for i, ev in enumerate(eigenvalues) if ev > 1]
+    n_kaiser = len(kaiser_indices)
+    print(f"Keep {n_kaiser} components (eigenvalue > 1)")
 
+    pca = PCA(n_components=n_kaiser)
+    if USE_KRUSKALWALLIS:
+        X_pca = pca.fit_transform(selected_features_data)  # this uses kruskal top feautres
+    else:
+        X_pca = pca.fit_transform(X)  # this uses all feautres
 
     # Plot the explained variance ratio for PCA
     plt.figure(figsize=(8, 6))
