@@ -87,10 +87,12 @@ def display_folding_predictions_performance(
 def plot_feature_correlation_matrix(
         dataset,
         save_plot=True,
-        filename="correlation_matrix.png"
+        filename="correlation_matrix.png",
+        x=80,
+        y=64
 ):
     correlation_matrix = dataset.corr()
-    plt.figure(figsize=(80, 64))
+    plt.figure(figsize=(x,y))
     sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
     plt.savefig(filename)
     plt.show()
