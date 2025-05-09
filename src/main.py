@@ -64,8 +64,6 @@ def main():
     feature_plotter = FeaturePlotter(clean_dataset, results)
     feature_plotter.plot_features(top_n=30)
 
-    exit(0)
-
     X = clean_dataset.to_numpy()
 
     if PLOT_CORRELATION_MATRIX:

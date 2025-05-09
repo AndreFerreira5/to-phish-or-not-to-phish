@@ -12,6 +12,7 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
+from wordcloud import WordCloud
 
 
 def display_predictions_performance(
@@ -106,6 +107,37 @@ def process_non_numeric_data(dataset):
 
     tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english", max_features=100)
     url_tfidf = tfidf.fit_transform(dataset["URL"])
+
+    url_feature_names = tfidf.get_feature_names_out()
+
+    # Create a DataFrame to map each word to its corresponding feature
+    url_feature_df = pd.DataFrame(url_tfidf.toarray(), columns=url_feature_names)
+
+    # Print the feature names
+    print(url_feature_names)
+
+    sum_tfidf_url = url_tfidf.sum(axis=0).A1
+    word_tfidf_pairs = list(zip(url_feature_names, sum_tfidf_url))
+
+    # Sort the words based on their TF-IDF scores
+    word_tfidf_pairs_sorted = sorted(word_tfidf_pairs, key=lambda x: x[1], reverse=True)
+
+    # Get the top N words (e.g., top 20 words)
+    top_n_words = word_tfidf_pairs_sorted[:20]
+    print(top_n_words)
+    print(word_tfidf_pairs_sorted[-20:])
+    top_n_words_dict = dict(top_n_words)
+
+    # Visualize using a word cloud
+    wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(top_n_words_dict)
+
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.show()
+
+    exit(0)
+
     title_tfidf = tfidf.fit_transform(dataset["Title"])
 
     url_tfidf_df = pd.DataFrame(url_tfidf.toarray(), columns=[f"URL_{i}" for i in range(url_tfidf.shape[1])])
