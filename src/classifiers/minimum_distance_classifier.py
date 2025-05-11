@@ -53,6 +53,7 @@ class MahalanobisMinimumDistanceClassifier(BaseMinimumDistanceClassifier):
             self.inv_covariances[cls] = np.linalg.inv(covariance_matrix)
 
 
+    '''
     def compute_distances(self, X):
         n_samples = X.shape[0]
         n_classes = self.centroids.shape[0]
@@ -63,3 +64,17 @@ class MahalanobisMinimumDistanceClassifier(BaseMinimumDistanceClassifier):
             distances[:, i] = np.sum(diff @ self.inv_covariances[self.classes[i]] * diff, axis=1)
 
         return np.sqrt(distances)
+    '''
+
+    def compute_distances(self, X):
+        n_samples, n_classes = X.shape[0], self.centroids.shape[0]
+        d2 = np.empty((n_samples, n_classes))
+
+        for i, cls in enumerate(self.classes):
+            diff = X - self.centroids[i]
+            d2[:, i] = np.sum(diff @ self.inv_covariances[cls] * diff, axis=1)
+
+        # numerical guard: force negatives that are ~-1e-12 → 0
+        d2 = np.clip(d2, a_min=0.0, a_max=None)
+        return np.sqrt(d2)
+

@@ -33,7 +33,7 @@ class KruskalWallisTest:
             # Skip feature if its variance is 0 in either class
             if SKIP_FEATURES:
                 if self.phishing_data[feature].nunique() <= 1 or self.legitimate_data[feature].nunique() <= 1:
-                    print(f"Skipping {feature} because it has no variance in either class")
+                    #print(f"Skipping {feature} because it has no variance in either class")
                     continue
 
             # Perform the Kruskal-Wallis test on the feature

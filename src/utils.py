@@ -116,7 +116,7 @@ def process_non_numeric_data(dataset):
     url_feature_df = pd.DataFrame(url_tfidf.toarray(), columns=url_feature_names)
 
     # Print the feature names
-    print(url_feature_names)
+    #print(url_feature_names)
 
     sum_tfidf_url = url_tfidf.sum(axis=0).A1
     word_tfidf_pairs = list(zip(url_feature_names, sum_tfidf_url))
@@ -126,8 +126,8 @@ def process_non_numeric_data(dataset):
 
     # Get the top N words (e.g., top 20 words)
     top_n_words = word_tfidf_pairs_sorted[:20]
-    print(top_n_words)
-    print(word_tfidf_pairs_sorted[-20:])
+    #print(top_n_words)
+    #print(word_tfidf_pairs_sorted[-20:])
     top_n_words_dict = dict(top_n_words)
 
     # Visualize using a word cloud
@@ -137,8 +137,6 @@ def process_non_numeric_data(dataset):
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     plt.show()
-
-    exit(0)
 
     title_tfidf = tfidf.fit_transform(dataset["Title"])
 
@@ -154,3 +152,44 @@ def process_non_numeric_data(dataset):
     dataset.drop(columns=["FILENAME"], inplace=True)
 
     return dataset
+
+
+def display_kw_quartiles(h_statistics):
+    """
+    Show Q1 / median / Q3 (and IQR) of the Kruskal–Wallis H-statistics
+    + a box-and-whisker plot with Q3 marked.
+
+    Parameters
+    ----------
+    h_statistics : 1-D array-like
+        The list/array of H values returned by Kruskal–Wallis.
+    """
+    import numpy as np
+    import pandas as pd
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
+    # ---- quartiles & IQR -----------------------------------------
+    q1 = np.percentile(h_statistics, 25)
+    q2 = np.percentile(h_statistics, 50)
+    q3 = np.percentile(h_statistics, 75)
+    iqr = q3 - q1
+
+    # ---- pretty print -------------------------------------------
+    summary = pd.DataFrame(
+        {"Q1": [q1], "Median": [q2], "Q3": [q3], "IQR": [iqr]}
+    )
+    print("\nKruskal–Wallis H-statistic summary:")
+    print(summary.to_string(index=False, float_format="%.2f"))
+
+    # ---- plot ----------------------------------------------------
+    plt.figure(figsize=(8, 3))
+    sns.boxplot(x=h_statistics, color="#8FBBD9")
+    plt.axvline(q3, color="red", ls="--", label=f"Q3 = {q3:.2f}")
+    plt.xlabel("H statistic")
+    plt.title("Distribution of Kruskal–Wallis H statistics")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    return summary
